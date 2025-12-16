@@ -17,8 +17,8 @@ try {
 }
 
 if (!apiKey) {
-    // Fallback to the one user provided in chat
-    apiKey = "AIzaSyAzpMOD887O2ZvLNx9Ven8h9xJAgu9Q5mE";
+    console.error("❌ No API key found in .env.local. Please set GEMINI_API_KEY.");
+    process.exit(1);
 }
 
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -36,7 +36,7 @@ async function listModels() {
         // In the Node SDK, checking if we can do that.
         // If not, we will test 3 common candidates: gemini-pro, gemini-1.5-flash, gemini-1.0-pro
 
-        const candidates = ["gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-pro", "gemini-1.0-pro"];
+        const candidates = ["gemini-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash"];
 
         console.log("Testing model availability...");
 
@@ -48,7 +48,7 @@ async function listModels() {
                 const response = await result.response;
                 console.log("SUCCESS ✅");
             } catch (e) {
-                console.log(`FAILED ❌ (${e.message.split(':')[0]})`);
+                console.log(`FAILED ❌ (${e.message})`);
             }
         }
 
