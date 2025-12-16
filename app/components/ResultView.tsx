@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
+import { addToLeaderboard } from "../utils/supabase-leaderboard";
 
 interface ResultViewProps {
     score: number;
@@ -9,12 +10,16 @@ interface ResultViewProps {
     comment: string;
     effect: string; // "wind", "impact", "explosion", "cosmic_horror"
     onReset: () => void;
+    onLeaderboardUpdate?: () => Promise<void>;
 }
 
-export default function ResultView({ score, rank, comment, effect, onReset }: ResultViewProps) {
+export default function ResultView({ score, rank, comment, effect, onReset, onLeaderboardUpdate }: ResultViewProps) {
     const [displayScore, setDisplayScore] = useState(0);
     const resultRef = useRef<HTMLDivElement>(null);
     const [isSharing, setIsSharing] = useState(false);
+    const [showNameInput, setShowNameInput] = useState(false);
+    const [playerName, setPlayerName] = useState("");
+    const [isSaved, setIsSaved] = useState(false);
 
     // Score Counting Animation
     useEffect(() => {
@@ -81,6 +86,33 @@ export default function ResultView({ score, rank, comment, effect, onReset }: Re
             console.error("Share failed", e);
         } finally {
             setIsSharing(false);
+        }
+    };
+
+    const handleSaveToLeaderboard = async () => {
+        if (!playerName.trim()) {
+            alert("이름을 입력해주세요!");
+            return;
+        }
+
+        try {
+            await addToLeaderboard({
+                name: playerName.trim(),
+                score: score,
+                rank: rank,
+            });
+
+            setIsSaved(true);
+            setShowNameInput(false);
+
+            if (onLeaderboardUpdate) {
+                await onLeaderboardUpdate();
+            }
+
+            alert(`${playerName}님의 점수가 랭킹보드에 등록되었습니다!`);
+        } catch (error) {
+            console.error('Failed to save to leaderboard:', error);
+            alert('랭킹보드 저장에 실패했습니다. 다시 시도해주세요.');
         }
     };
 
@@ -158,8 +190,8 @@ export default function ResultView({ score, rank, comment, effect, onReset }: Re
                         })
                     }}
                     className={`text-6xl md:text-8xl font-black text-transparent bg-clip-text ${rank === "KO"
-                            ? "bg-gradient-to-br from-yellow-400 via-red-500 to-pink-500 drop-shadow-[0_0_30px_rgba(255,215,0,0.8)]"
-                            : "bg-gradient-to-br from-primary to-secondary drop-shadow-[0_0_15px_var(--color-primary)]"
+                        ? "bg-gradient-to-br from-yellow-400 via-red-500 to-pink-500 drop-shadow-[0_0_30px_rgba(255,215,0,0.8)]"
+                        : "bg-gradient-to-br from-primary to-secondary drop-shadow-[0_0_15px_var(--color-primary)]"
                         }`}
                 >
                     {rank}
@@ -223,7 +255,65 @@ export default function ResultView({ score, rank, comment, effect, onReset }: Re
                 >
                     {isSharing ? 'Sharing...' : 'Share Result'}
                 </button>
+
+                <button
+                    onClick={() => setShowNameInput(true)}
+                    disabled={isSaved}
+                    className="px-8 py-3 bg-primary hover:bg-white text-black font-bold uppercase tracking-wider transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isSaved ? '✓ Saved' : 'Add to Leaderboard'}
+                </button>
             </motion.div>
+
+            {/* Name Input Modal */}
+            {showNameInput && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    onClick={() => setShowNameInput(false)}
+                >
+                    <motion.div
+                        initial={{ scale: 0.9, y: 20 }}
+                        animate={{ scale: 1, y: 0 }}
+                        className="bg-zinc-900 border-4 border-primary rounded-xl p-8 max-w-md w-full"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-2xl font-black text-white mb-4 text-center">
+                            Enter Your Name
+                        </h3>
+                        <p className="text-zinc-400 text-sm mb-6 text-center">
+                            Your score will be saved to the leaderboard
+                        </p>
+
+                        <input
+                            type="text"
+                            maxLength={20}
+                            value={playerName}
+                            onChange={(e) => setPlayerName(e.target.value)}
+                            placeholder="Your name..."
+                            className="w-full bg-black/50 border-2 border-zinc-700 focus:border-primary text-white text-xl p-4 rounded-lg outline-none transition-all duration-300 placeholder:text-zinc-600 text-center mb-6"
+                            onKeyDown={(e) => e.key === "Enter" && handleSaveToLeaderboard()}
+                            autoFocus
+                        />
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowNameInput(false)}
+                                className="flex-1 px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase tracking-wider transition-colors duration-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveToLeaderboard}
+                                className="flex-1 px-6 py-3 bg-primary hover:bg-white text-black font-bold uppercase tracking-wider transition-colors duration-200"
+                            >
+                                Save
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
 
         </div>
     );

@@ -2,13 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LucideQuote, Zap } from "lucide-react";
+import { LucideQuote, Zap, Trophy } from "lucide-react";
 import ResultView from "./components/ResultView";
+import Leaderboard from "./components/Leaderboard";
+import { getLeaderboard, type LeaderboardEntry } from "./utils/supabase-leaderboard";
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ score: number; rank: string; comment: string; effect: string } | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   // Check for shared result in URL on mount
   useEffect(() => {
@@ -27,6 +32,23 @@ export default function Home() {
       });
     }
   }, []);
+
+  // Load leaderboard data on mount
+  useEffect(() => {
+    loadLeaderboard();
+  }, []);
+
+  const loadLeaderboard = async () => {
+    setLeaderboardLoading(true);
+    try {
+      const data = await getLeaderboard();
+      setLeaderboardData(data);
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     if (!input.trim()) return;
@@ -61,6 +83,10 @@ export default function Home() {
     setInput("");
   };
 
+  const handleLeaderboardUpdate = async () => {
+    await loadLeaderboard();
+  };
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-black overflow-hidden relative">
       {/* CSS Grid Background */}
@@ -68,6 +94,16 @@ export default function Home() {
 
 
       <div className="z-10 w-full max-w-3xl flex flex-col items-center space-y-12">
+        {/* Leaderboard Button - Fixed position */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowLeaderboard(true)}
+          className="fixed top-8 right-8 z-50 p-3 bg-zinc-800 hover:bg-primary border-2 border-zinc-700 hover:border-primary rounded-lg transition-all duration-200 group shadow-lg"
+        >
+          <Trophy className="w-6 h-6 text-primary group-hover:text-black transition-colors" />
+        </motion.button>
+
         {/* Header */}
         <header className="text-center space-y-4">
           <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-secondary animate-flicker drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
@@ -143,8 +179,19 @@ export default function Home() {
                 comment={result.comment}
                 effect={result.effect}
                 onReset={resetGame}
+                onLeaderboardUpdate={handleLeaderboardUpdate}
               />
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Leaderboard Modal */}
+        <AnimatePresence>
+          {showLeaderboard && (
+            <Leaderboard
+              entries={leaderboardData}
+              onClose={() => setShowLeaderboard(false)}
+            />
           )}
         </AnimatePresence>
       </div>
