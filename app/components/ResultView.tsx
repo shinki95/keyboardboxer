@@ -86,30 +86,81 @@ export default function ResultView({ score, rank, comment, effect, onReset }: Re
 
     return (
         <div className="flex flex-col items-center w-full max-w-2xl">
+            {/* KO Fanfare Effect */}
+            {rank === "KO" && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="fixed inset-0 pointer-events-none z-50"
+                >
+                    {/* Confetti particles */}
+                    {[...Array(50)].map((_, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{
+                                x: "50vw",
+                                y: "50vh",
+                                scale: 0,
+                                rotate: 0
+                            }}
+                            animate={{
+                                x: `${Math.random() * 100}vw`,
+                                y: `${Math.random() * 100}vh`,
+                                scale: [0, 1, 0.5],
+                                rotate: Math.random() * 360
+                            }}
+                            transition={{
+                                duration: 2 + Math.random() * 2,
+                                ease: "easeOut"
+                            }}
+                            className="absolute w-4 h-4 rounded-full"
+                            style={{
+                                backgroundColor: ['#ff00ff', '#00f0ff', '#ffff00', '#ff0000'][Math.floor(Math.random() * 4)]
+                            }}
+                        />
+                    ))}
+
+                    {/* Flash effect */}
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 0.5, 0] }}
+                        transition={{ duration: 0.5, times: [0, 0.5, 1] }}
+                        className="absolute inset-0 bg-white"
+                    />
+                </motion.div>
+            )}
+
             {/* Capture Area */}
             <div
                 ref={resultRef}
-                // Compatibility: Strict INLINE styles for colors. NO Tailwind opacity classes.
-                className={`flex flex-col items-center justify-center w-full p-8 space-y-8 text-center rounded-xl border-4 border-[#00f0ff] ${getEffectClass()}`}
-                style={{
-                    backgroundColor: 'rgba(5, 5, 16, 0.95)', // Replaces bg-black/90
-                    color: 'white'
-                }}
+                // Standard styling without html2canvas dependencies
+                className={`flex flex-col items-center justify-center w-full p-8 space-y-8 text-center rounded-xl border-4 ${rank === "KO" ? "border-yellow-400 animate-pulse" : "border-primary"} bg-zinc-900/90 ${getEffectClass()}`}
             >
 
                 {/* Rank Badge */}
                 <motion.div
                     initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.5 }}
-                    // Compatibility: Text Gradient logic
-                    className="text-6xl md:text-8xl font-black drop-shadow-[0_0_15px_#00f0ff]"
-                    style={{
-                        color: 'transparent',
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        backgroundImage: 'linear-gradient(135deg, #00f0ff 0%, #ff00ff 100%)' // Standard gradient
+                    animate={{
+                        scale: rank === "KO" ? [1, 1.2, 1] : 1,
+                        rotate: 0
                     }}
+                    transition={{
+                        type: "spring",
+                        stiffness: 260,
+                        damping: 20,
+                        delay: 0.5,
+                        ...(rank === "KO" && {
+                            scale: {
+                                repeat: Infinity,
+                                duration: 1,
+                                repeatType: "reverse" as const
+                            }
+                        })
+                    }}
+                    className={`text-6xl md:text-8xl font-black text-transparent bg-clip-text ${rank === "KO"
+                            ? "bg-gradient-to-br from-yellow-400 via-red-500 to-pink-500 drop-shadow-[0_0_30px_rgba(255,215,0,0.8)]"
+                            : "bg-gradient-to-br from-primary to-secondary drop-shadow-[0_0_15px_var(--color-primary)]"
+                        }`}
                 >
                     {rank}
                 </motion.div>
